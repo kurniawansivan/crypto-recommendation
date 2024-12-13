@@ -1,44 +1,57 @@
-import schedule
+from fastapi import FastAPI
 import time
-import os
 from utils.fetch_data import fetch_crypto_data
 from utils.recommend import calculate_indicators, recommend
 
-# Path untuk file data
+# Inisialisasi FastAPI
+app = FastAPI()
+
+# File data
 DATA_FILE = "data/crypto_data.csv"
 
-def update_data():
+@app.get("/")
+def home():
+    return {"message": "Crypto Recommendation Engine is running 24/7!"}
+
+@app.get("/recommendations")
+def get_recommendations():
     """
-    Mengambil data dari API, menghitung indikator, dan menyimpan rekomendasi ke file CSV.
+    Endpoint untuk mendapatkan rekomendasi cryptocurrency.
     """
-    try:
-        print("Fetching new data...")
-        df = fetch_crypto_data()
-        if df is not None:
-            # Hitung indikator teknikal
-            df = calculate_indicators(df)
-            # Dapatkan rekomendasi
-            recommendations = recommend(df)
-            print("Recommendations:")
+    data = fetch_crypto_data()
+    if data is not None:
+        data = calculate_indicators(data)
+        recommendations = recommend(data)
+        return recommendations.to_dict(orient="records")
+    return {"error": "Failed to fetch data"}
+
+# Fungsi untuk loop 24/7
+def continuous_update():
+    """
+    Fungsi yang berjalan 24/7 untuk memperbarui data dan memberikan rekomendasi.
+    """
+    while True:
+        print("Fetching and updating data...")
+        data = fetch_crypto_data()
+        if data is not None:
+            data = calculate_indicators(data)
+            recommendations = recommend(data)
+            print("Updated Recommendations:")
             print(recommendations)
-
-            # Simpan data ke file CSV
-            if not os.path.exists(DATA_FILE):
-                df.to_csv(DATA_FILE, index=False)
-            else:
-                df.to_csv(DATA_FILE, mode="a", header=False, index=False)
-            print("Data updated successfully!")
         else:
-            print("No data fetched. API might be down or empty response.")
-    except Exception as e:
-        print(f"Error during data update: {e}")
+            print("Failed to fetch data. Retrying in 10 seconds...")
+        time.sleep(10)  # Tunggu 10 detik sebelum mencoba lagi
 
-# Jadwal pembaruan data
-schedule.every().day.at("07:00").do(update_data)  # Pembaruan pagi
-schedule.every().day.at("23:59").do(update_data)  # Pembaruan malam
+# Jalankan aplikasi FastAPI
+if __name__ == "__main__":
+    import threading
+    import os
+    import uvicorn
 
-# Loop penjadwalan
-print("Scheduler started. Waiting for tasks...")
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+    # Jalankan loop pembaruan data di thread terpisah
+    update_thread = threading.Thread(target=continuous_update, daemon=True)
+    update_thread.start()
+
+    # Jalankan server FastAPI
+    port = int(os.environ.get("PORT", 8000))  # Railway mendukung variabel PORT otomatis
+    uvicorn.run(app, host="0.0.0.0", port=port)
