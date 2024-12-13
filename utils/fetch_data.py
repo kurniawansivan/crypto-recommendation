@@ -4,8 +4,7 @@ import pandas as pd
 from dotenv import load_dotenv
 from datetime import datetime
 
-load_dotenv()
-
+load_dotenv()  # Load API Key dari .env file
 API_KEY = os.getenv("COINMARKETCAP_API_KEY")
 BASE_URL = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
 
@@ -23,7 +22,8 @@ def fetch_crypto_data():
                 "symbol": item["symbol"],
                 "price": item["quote"]["USD"]["price"],
                 "volume_24h": item["quote"]["USD"]["volume_24h"],
-                "percent_change_1h": item["quote"]["USD"]["percent_change_1h"]
+                "percent_change_1h": item["quote"]["USD"]["percent_change_1h"],
+                "percent_change_24h": item["quote"]["USD"]["percent_change_24h"]
             } for item in data
         ])
         return df

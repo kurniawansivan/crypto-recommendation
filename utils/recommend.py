@@ -1,12 +1,45 @@
-import pandas as pd
+from ta.momentum import RSIIndicator
+from ta.volatility import BollingerBands
 
-def recommend_top_cryptos(file_path, top_n=5):
-    # Load cached data
-    df = pd.read_csv(file_path)
+def calculate_indicators(data):
+    """
+    Menghitung indikator teknikal untuk analisis pergerakan cryptocurrency.
+    :param data: DataFrame dengan kolom ['price']
+    :return: DataFrame dengan indikator teknikal baru
+    """
+    # RSI
+    data["rsi"] = RSIIndicator(close=data["price"], window=14).rsi()
 
-    # Select the latest data
-    latest_data = df.sort_values(by="timestamp", ascending=False).groupby("symbol").first()
+    # Bollinger Bands
+    bb = BollingerBands(close=data["price"], window=20, window_dev=2)
+    data["bb_upper"] = bb.bollinger_hband()
+    data["bb_lower"] = bb.bollinger_lband()
 
-    # Filter and sort by volume and price change
-    recommendations = latest_data.sort_values(by=["percent_change_1h", "volume_24h"], ascending=False).head(top_n)
-    return recommendations[["name", "symbol", "price", "volume_24h", "percent_change_1h"]]
+    return data
+
+
+def recommend(data):
+    """
+    Memberikan sinyal rekomendasi beli atau jual berdasarkan indikator teknikal.
+    :param data: DataFrame dengan kolom ['price', 'rsi', 'bb_upper', 'bb_lower']
+    :return: DataFrame dengan sinyal rekomendasi
+    """
+    recommendations = []
+    for _, row in data.iterrows():
+        if row["rsi"] < 30 and row["price"] < row["bb_lower"]:
+            recommendations.append({
+                "crypto": row["symbol"],
+                "signal": "BUY",
+                "current_price": row["price"],
+                "take_profit": row["price"] * 1.05,  # Target profit 5%
+                "stop_loss": row["price"] * 0.95,   # Stop loss 5%
+                "reason": "RSI < 30 and price < Bollinger lower band"
+            })
+        elif row["rsi"] > 70 and row["price"] > row["bb_upper"]:
+            recommendations.append({
+                "crypto": row["symbol"],
+                "signal": "SELL",
+                "current_price": row["price"],
+                "reason": "RSI > 70 and price > Bollinger upper band"
+            })
+    return pd.DataFrame(recommendations)

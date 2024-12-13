@@ -1,17 +1,23 @@
 import streamlit as st
-import pandas as pd
-from utils.recommend import recommend_top_cryptos
-
-DATA_FILE = "data/crypto_data.csv"
+from utils.fetch_data import fetch_crypto_data
+from utils.recommend import calculate_indicators, recommend
 
 st.title("Cryptocurrency Recommendation Engine")
 
-# Load recommendations
-st.header("Top Recommendations")
-recommendations = recommend_top_cryptos(DATA_FILE)
-st.table(recommendations)
+# Load data
+st.subheader("Data Cryptocurrency")
+data = fetch_crypto_data()
+if data is not None:
+    data = calculate_indicators(data)
+    st.dataframe(data)
 
-# Show cached data
-st.header("Cached Data")
-df = pd.read_csv(DATA_FILE)
-st.dataframe(df)
+    # Rekomendasi
+    st.subheader("Rekomendasi")
+    recommendations = recommend(data)
+    st.table(recommendations)
+else:
+    st.error("Gagal mengambil data dari API.")
+
+# Tombol Refresh
+if st.button("Refresh Data"):
+    st.experimental_rerun()
