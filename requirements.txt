@@ -1,0 +1,7 @@
+pandas
+numpy
+requests
+scikit-learn
+python-dotenv
+schedule
+streamlit
