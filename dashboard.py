@@ -15,9 +15,12 @@ if st.button("Refresh Data"):
             model = train_model(data)  # Latih model
             recommendations = recommend(data, model)
 
+            # Tambahkan kolom perubahan harga 24 jam
+            recommendations["percent_change_24h"] = data["percent_change_24h"]
+
             # Tampilkan rekomendasi dalam tabel
             st.subheader("Rekomendasi Cryptocurrency")
-            st.table(recommendations)
+            st.table(recommendations[["symbol", "price", "market_cap", "percent_change_24h", "recommendation"]])
         else:
             st.write("Gagal mengambil data cryptocurrency.")
     except Exception as e:

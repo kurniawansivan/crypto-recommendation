@@ -44,4 +44,4 @@ def recommend(data, model):
     """
     features = data[["rsi", "bb_upper", "bb_lower", "macd", "ema"]]
     data["recommendation"] = model.predict(features)
-    return data[["symbol", "price", "recommendation"]]
+    return data[["symbol", "price", "market_cap", "recommendation"]]  # Tambahkan market_cap

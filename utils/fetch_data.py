@@ -24,12 +24,15 @@ def fetch_crypto_data():
             {
                 "symbol": coin["symbol"],
                 "name": coin["name"],
-                "price": coin["quote"]["USD"]["price"],
-                "volume_24h": coin["quote"]["USD"]["volume_24h"],
-                "market_cap": coin["quote"]["USD"]["market_cap"]
+                "price": round(coin["quote"]["USD"]["price"], 8),  # Presisi hingga 8 digit
+                "market_cap": coin["quote"]["USD"]["market_cap"],
+                "percent_change_24h": coin["quote"]["USD"]["percent_change_24h"]  # Perubahan harga 24 jam dalam persen
             }
             for coin in data
         ])
+
+        # Urutkan berdasarkan market cap
+        df = df.sort_values(by="market_cap", ascending=False).reset_index(drop=True)
         return df
     except Exception as e:
         print(f"Error fetching data: {e}")
