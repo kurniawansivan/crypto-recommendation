@@ -1,46 +1,47 @@
-import pandas as pd
 from ta.momentum import RSIIndicator
 from ta.volatility import BollingerBands
+from ta.trend import MACD, EMAIndicator
+from sklearn.ensemble import RandomForestClassifier
+import pandas as pd
+import numpy as np
 
 def calculate_indicators(data):
     """
-    Menghitung indikator teknikal untuk analisis pergerakan cryptocurrency.
-    :param data: DataFrame dengan kolom ['price']
-    :return: DataFrame dengan indikator teknikal baru
+    Menghitung indikator teknikal untuk data cryptocurrency.
     """
-    # RSI
     data["rsi"] = RSIIndicator(close=data["price"], window=14).rsi()
-
-    # Bollinger Bands
     bb = BollingerBands(close=data["price"], window=20, window_dev=2)
     data["bb_upper"] = bb.bollinger_hband()
     data["bb_lower"] = bb.bollinger_lband()
-
+    macd = MACD(close=data["price"], window_slow=26, window_fast=12, window_sign=9)
+    data["macd"] = macd.macd_diff()
+    ema = EMAIndicator(close=data["price"], window=20)
+    data["ema"] = ema.ema_indicator()
     return data
 
+def train_model(data):
+    """
+    Melatih model machine learning untuk menentukan Buy/Sell/Hold.
+    """
+    # Labelkan data berdasarkan aturan manual (target: Buy, Sell, Hold)
+    data["target"] = np.where(
+        (data["rsi"] < 30) & (data["price"] < data["bb_lower"]), "BUY",
+        np.where((data["rsi"] > 70) & (data["price"] > data["bb_upper"]), "SELL", "HOLD")
+    )
 
-def recommend(data):
+    # Fitur dan label
+    features = data[["rsi", "bb_upper", "bb_lower", "macd", "ema"]]
+    labels = data["target"]
+
+    # Model Random Forest
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(features, labels)
+    return model
+
+def recommend(data, model):
     """
-    Memberikan sinyal rekomendasi beli atau jual berdasarkan indikator teknikal.
-    :param data: DataFrame dengan kolom ['price', 'rsi', 'bb_upper', 'bb_lower']
-    :return: DataFrame dengan sinyal rekomendasi
+    Memberikan rekomendasi berdasarkan model machine learning.
     """
-    recommendations = []
-    for _, row in data.iterrows():
-        if row["rsi"] < 30 and row["price"] < row["bb_lower"]:
-            recommendations.append({
-                "crypto": row["symbol"],
-                "signal": "BUY",
-                "current_price": row["price"],
-                "take_profit": row["price"] * 1.05,  # Target profit 5%
-                "stop_loss": row["price"] * 0.95,   # Stop loss 5%
-                "reason": "RSI < 30 and price < Bollinger lower band"
-            })
-        elif row["rsi"] > 70 and row["price"] > row["bb_upper"]:
-            recommendations.append({
-                "crypto": row["symbol"],
-                "signal": "SELL",
-                "current_price": row["price"],
-                "reason": "RSI > 70 and price > Bollinger upper band"
-            })
-    return pd.DataFrame(recommendations)
+    features = data[["rsi", "bb_upper", "bb_lower", "macd", "ema"]]
+    data["recommendation"] = model.predict(features)
+    return data[["symbol", "price", "recommendation"]]

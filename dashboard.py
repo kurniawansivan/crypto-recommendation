@@ -1,23 +1,26 @@
 import streamlit as st
 from utils.fetch_data import fetch_crypto_data
-from utils.recommend import calculate_indicators, recommend
+from utils.recommend import calculate_indicators, train_model, recommend
 
-st.title("Cryptocurrency Recommendation Engine")
+st.title("Crypto Recommendation Dashboard")
+st.write("Dashboard untuk rekomendasi beli, jual, atau tahan (Hold) cryptocurrency.")
 
-# Load data
-st.subheader("Data Cryptocurrency")
-data = fetch_crypto_data()
-if data is not None:
-    data = calculate_indicators(data)
-    st.dataframe(data)
-
-    # Rekomendasi
-    st.subheader("Rekomendasi")
-    recommendations = recommend(data)
-    st.table(recommendations)
-else:
-    st.error("Gagal mengambil data dari API.")
-
-# Tombol Refresh
+# Tombol untuk refresh data
 if st.button("Refresh Data"):
-    st.experimental_rerun()
+    try:
+        # Ambil data dan hitung indikator
+        data = fetch_crypto_data()
+        if data is not None:
+            data = calculate_indicators(data)
+            model = train_model(data)  # Latih model
+            recommendations = recommend(data, model)
+
+            # Tampilkan rekomendasi dalam tabel
+            st.subheader("Rekomendasi Cryptocurrency")
+            st.table(recommendations)
+        else:
+            st.write("Gagal mengambil data cryptocurrency.")
+    except Exception as e:
+        st.write(f"Error: {e}")
+else:
+    st.write("Klik tombol di atas untuk mengambil rekomendasi terbaru.")

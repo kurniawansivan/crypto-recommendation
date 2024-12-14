@@ -1,32 +1,36 @@
-import os
 import requests
 import pandas as pd
-from dotenv import load_dotenv
-from datetime import datetime
+import os
 
-load_dotenv()  # Load API Key dari .env file
-API_KEY = os.getenv("COINMARKETCAP_API_KEY")
-BASE_URL = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
+# API CoinMarketCap
+API_URL = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
+API_KEY = os.getenv("CMC_API_KEY")  # API Key diambil dari .env
 
 def fetch_crypto_data():
-    headers = {"X-CMC_PRO_API_KEY": API_KEY}
-    params = {"start": 1, "limit": 100, "convert": "USD"}
-    response = requests.get(BASE_URL, headers=headers, params=params)
+    """
+    Mengambil data cryptocurrency dari API CoinMarketCap.
+    """
+    headers = {
+        "Accepts": "application/json",
+        "X-CMC_PRO_API_KEY": API_KEY,
+    }
 
-    if response.status_code == 200:
+    try:
+        response = requests.get(API_URL, headers=headers, params={"limit": 100})
         data = response.json()["data"]
+
+        # Konversi data ke DataFrame
         df = pd.DataFrame([
             {
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "name": item["name"],
-                "symbol": item["symbol"],
-                "price": item["quote"]["USD"]["price"],
-                "volume_24h": item["quote"]["USD"]["volume_24h"],
-                "percent_change_1h": item["quote"]["USD"]["percent_change_1h"],
-                "percent_change_24h": item["quote"]["USD"]["percent_change_24h"]
-            } for item in data
+                "symbol": coin["symbol"],
+                "name": coin["name"],
+                "price": coin["quote"]["USD"]["price"],
+                "volume_24h": coin["quote"]["USD"]["volume_24h"],
+                "market_cap": coin["quote"]["USD"]["market_cap"]
+            }
+            for coin in data
         ])
         return df
-    else:
-        print(f"Error: {response.status_code}, {response.json()}")
+    except Exception as e:
+        print(f"Error fetching data: {e}")
         return None
